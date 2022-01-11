@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<style>
+.scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome Safari */
+}
+
+.scrollbar {
+  scrollbar-width: none; /* firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="keywords" content="Hexo Theme Keep">
+    <meta name="description" content="Hexo Theme Keep">
+    <meta name="author" content="Z.J.H">
+    
+    <title>
+        
+            Redis 五种数据结构底层实现 |
+        
+        strive
+    </title>
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <link rel="shortcut icon" href="/images/logo.png">
+    
+<link rel="stylesheet" href="/css/font-awesome.min.css">
+
+    <script id="hexo-configurations">
+    let KEEP = window.KEEP || {};
+    KEEP.hexo_config = {"hostname":"example.com","root":"/","language":"zh-CN","path":"search.json"};
+    KEEP.theme_config = {"toc":{"enable":true,"number":true,"expand_all":false,"init_open":true},"style":{"primary_color":"#008080","avatar":"/images/avatar.jpg","favicon":"/images/logo.png","article_img_align":"left","left_side_width":"260px","content_max_width":"920px","hover":{"shadow":true,"scale":true},"first_screen":{"enable":true,"background_img":"/images/bg.svg","description":"The harder you work, the luckier you will be."},"scroll":{"progress_bar":{"enable":true},"percent":{"enable":true}}},"local_search":{"enable":true,"preload":false},"code_copy":{"enable":true,"style":"default"},"pjax":{"enable":false},"lazyload":{"enable":false},"version":"3.4.5"};
+    KEEP.language_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+  </script>
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+
+<script src="/js/myjs/鼠标点击出爱心.js" type="text/javascript"></script>
+<style>
+body {
+	cursor: url(https://cdn.jsdelivr.net/gh/kaix2301/pictures/img202201071208706.cur), auto;
+}
+a {
+	cursor: url(https://cdn.jsdelivr.net/gh/kaix2301/pictures/img202201071205091.cur), auto!important;
+}
+</style>
+<body class="scrollbar">
+<div class="progress-bar-container">
+    
+        <span class="scroll-progress-bar"></span>
+    
+
+    
+</div>
+
+
+<main class="page-container">
+
+    
+
+    <div class="page-main-content">
+
+        <div class="page-main-content-top">
+            <header class="header-wrapper">
+
+    <div class="header-content">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                strive
+            </a>
+        </div>
+
+        <div class="right">
+            <div class="pc">
+                <ul class="menu-list">
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/"
+                            >
+                                首页
+                            </a>
+                        </li>
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/archives"
+                            >
+                                归档
+                            </a>
+                        </li>
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/categories"
+                            >
+                                分类
+                            </a>
+                        </li>
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/tags"
+                            >
+                                标签
+                            </a>
+                        </li>
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/links"
+                            >
+                                收藏
+                            </a>
+                        </li>
+                    
+                        <li class="menu-item">
+                            <a class=""
+                               href="/about"
+                            >
+                                关于
+                            </a>
+                        </li>
+                    
+                    
+                        <li class="menu-item search search-popup-trigger">
+                            <i class="fas fa-search"></i>
+                        </li>
+                    
+                </ul>
+            </div>
+            <div class="mobile">
+                
+                    <div class="icon-item search search-popup-trigger"><i class="fas fa-search"></i></div>
+                
+                <div class="icon-item menu-bar">
+                    <div class="menu-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="header-drawer">
+        <ul class="drawer-menu-list">
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/">首页</a>
+                </li>
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/archives">归档</a>
+                </li>
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/categories">分类</a>
+                </li>
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/tags">标签</a>
+                </li>
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/links">收藏</a>
+                </li>
+            
+                <li class="drawer-menu-item flex-center">
+                    <a class=""
+                       href="/about">关于</a>
+                </li>
+            
+        </ul>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+        </div>
+
+        <div class="page-main-content-middle">
+
+            <div class="main-content">
+
+                
+                    <div class="fade-in-down-animation">
+    <div class="article-content-container">
+
+        <div class="article-title">
+            <span class="title-hover-animation">Redis 五种数据结构底层实现</span>
+        </div>
+
+        
+            <div class="article-header">
+                <div class="avatar">
+                    <img src="/images/avatar.jpg">
+                </div>
+                <div class="info">
+                    <div class="author">
+                        <span class="name">Z.J.H</span>
+                        
+                            <span class="author-label">后端实习生</span>
+                        
+                    </div>
+                    <div class="meta-info">
+                        <div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fas fa-edit"></i>&nbsp;
+        <span class="pc">2021-04-19 14:18:19</span>
+        <span class="mobile">2021-04-19 14:18</span>
+    </span>
+    
+        <span class="article-categories article-meta-item">
+            <i class="fas fa-folder"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/">中间件</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        &gt; <a href="/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/Redis/">Redis</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fas fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/Redis/">Redis</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E4%B8%AD%E9%97%B4%E4%BB%B6/">中间件</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E7%BC%93%E5%AD%98/">缓存</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+    
+    
+</div>
+
+                    </div>
+                </div>
+            </div>
+        
+
+        <div class="article-content markdown-body">
+            <h1 id="Redis"><a href="#Redis" class="headerlink" title="Redis"></a>Redis</h1><p>参考文章链接：</p>
+<p>整体架构： <a class="link"   target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_45017459/article/details/115802399?spm=1001.2014.3001.5501" >https://blog.csdn.net/weixin_45017459/article/details/115802399?spm=1001.2014.3001.5501<i class="fas fa-external-link-alt"></i></a></p>
+<p>String 部分：<a class="link"   target="_blank" rel="noopener" href="https://blog.csdn.net/qq_41446768/article/details/98969850" >https://blog.csdn.net/qq_41446768/article/details/98969850<i class="fas fa-external-link-alt"></i></a></p>
+<p>Zset 部分：<a class="link"   target="_blank" rel="noopener" href="https://blog.csdn.net/weichi7549/article/details/107335133/" >https://blog.csdn.net/weichi7549/article/details/107335133/<i class="fas fa-external-link-alt"></i></a></p>
+<p>淘汰策略部分：<a class="link"   target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/105587132" >https://zhuanlan.zhihu.com/p/105587132<i class="fas fa-external-link-alt"></i></a></p>
+<h2 id="一、概述"><a href="#一、概述" class="headerlink" title="一、概述"></a>一、概述</h2><p>Redis 是速度非常快的非关系型（NoSQL）内存键值数据库，可以存储键和五种不同类型的值之间的映射</p>
+<p>键的类型只能为字符串，值支持五种数据类型：字符串、列表、集合、散列表、有序集合</p>
+<p>Redis 支持很多特性，例如将内存中的数据持久化到硬盘中，使用复制来扩展读性能，使用分片来扩展写性能</p>
+<h2 id="二、数据类型"><a href="#二、数据类型" class="headerlink" title="二、数据类型"></a>二、数据类型</h2><table>
+<thead>
+<tr>
+<th align="center">数据类型</th>
+<th align="center">可以存储的值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">STRING</td>
+<td align="center">字符串、整数或者浮点数</td>
+</tr>
+<tr>
+<td align="center">LIST</td>
+<td align="center">列表</td>
+</tr>
+<tr>
+<td align="center">SET</td>
+<td align="center">无序集合</td>
+</tr>
+<tr>
+<td align="center">HASH</td>
+<td align="center">包含键值对的无序散列表</td>
+</tr>
+<tr>
+<td align="center">ZSET</td>
+<td align="center">有序集合</td>
+</tr>
+</tbody></table>
+<h2 id="String"><a href="#String" class="headerlink" title="String"></a>String</h2><p>Redis的字符串是动态字符串，是可以修改的字符串，内部实现类似于Java的 ArrayList，实际上是一种名为简单动态字符串(SDS Simple Dynamic String)的抽象类型，在redis的数据库里面包含字符串值的键值对都是SDS实现的</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sdshdr</span> &#123;</span>  </span><br><span class="line"> </span><br><span class="line">    <span class="comment">// 记录buf数组中已使用字节的数量  </span></span><br><span class="line">    <span class="comment">// 等于SDS所保存字符串的长度  </span></span><br><span class="line">    <span class="keyword">int</span> len;  </span><br><span class="line"> </span><br><span class="line">    <span class="comment">// 记录buf数组中未使用字节的数量  </span></span><br><span class="line">    <span class="keyword">int</span> free;  </span><br><span class="line"> </span><br><span class="line">    <span class="comment">// 字节数组，用于保存字符串  </span></span><br><span class="line">    <span class="keyword">char</span> buf[];  </span><br><span class="line"> </span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h5 id="一个sds的存储示例："><a href="#一个sds的存储示例：" class="headerlink" title="一个sds的存储示例："></a>一个sds的存储示例：</h5><p><img src="sds.png" alt="sds"></p>
+<ul>
+<li>Free等于0代表当前已满，没有任何未分配的空间</li>
+<li>len等于5代表存储了五字节长的字符串</li>
+<li>buf属性是一个char类型的数组,数组的前五个字节分别保存了r、e、d、i、s五个字符串，而最后一个字节则保存了’\0’</li>
+<li>SDS遵循C字符串以空字符串结尾的惯例，保存空字符串的一字节空间不计算到SDS的len属性里面，并且为空字符串分配额外的一字节空间，以及添加空字符串到字符串末尾等操作，都是由SDS函数自动完成的,所以这个空字符串对于SDS的使用者来说是完全透明的</li>
+</ul>
+<h5 id="SDS的扩容机制："><a href="#SDS的扩容机制：" class="headerlink" title="SDS的扩容机制："></a>SDS的扩容机制：</h5><ul>
+<li>当字符串小于1M时，扩容都是加倍现有的空间，实际的容量就是(当前容量*2+1)额外的一字节用于保存空字符串</li>
+<li>如果超过1M时,扩容时一次只会多扩1M的空间，实际的容量是（当前容量+1M+1byte）。需要注意的是字符串最大长度为512M</li>
+</ul>
+<h5 id="使用-SDS-而不是用字符串的原因："><a href="#使用-SDS-而不是用字符串的原因：" class="headerlink" title="使用 SDS 而不是用字符串的原因："></a>使用 SDS 而不是用字符串的原因：</h5><ul>
+<li>降低获取字符串长度的时间复杂度到O(1)</li>
+<li>减少了修改字符串时的内存重分配次数</li>
+<li>兼容c字符串的同时，提高了一些字符串工具方法的效率</li>
+<li>二进制安全（数据写入的格式和读取的格式一致）</li>
+</ul>
+<h2 id="List（列表）"><a href="#List（列表）" class="headerlink" title="List（列表）"></a>List（列表）</h2><h3 id="底层实现："><a href="#底层实现：" class="headerlink" title="底层实现："></a>底层实现：</h3><ul>
+<li>底层用 quicklist 双向链表存储，而 quicklist 的每一个结点包含着一个 ziplist；总体来说 list 底层使用 quicklist + 双向链表实现的</li>
+</ul>
+<h3 id="ziplist"><a href="#ziplist" class="headerlink" title="ziplist"></a>ziplist</h3><ul>
+<li>介绍<ul>
+<li>一个特殊的双向链表；没有维护一对指向前后结点的指针（prev、next），而是存储上一个 entry 的长度和当前 entry的长度，通过长度推算下一个元素的位置</li>
+<li>典型的“时间换空间”：牺牲读取的性能，获取高效的存储空间；因为存储指针比存储 entry 长度更费内存（字符串简短的情况）</li>
+<li>字段、值比较小才会用 ziplist</li>
+</ul>
+</li>
+<li>优缺点<ul>
+<li>ziplist 存储在一段连续的内存上，存储效率很高</li>
+<li>不利于增删改操作，因为需要频繁的申请和释放内存</li>
+</ul>
+</li>
+</ul>
+<h3 id="quicklist"><a href="#quicklist" class="headerlink" title="quicklist"></a>quicklist</h3><p>每个节点都是以压缩列表ziplist的结构保存着数据，而每个ziplist又可以包含多个entry。也可以说一个quicklist节点保存的是一片数据，而不是一个数据，即每个quicklist节点就是一个ziplist，具备压缩列表的特性。整体上quicklist就是一个双向链表结构，和普通的链表操作一样，插入删除效率很高，但查询的效率却是O(n)。不过，这样的链表访问两端的元素的时间复杂度却是O(1)。所以，对list的操作多数都是poll和push<br><img src="quicklist.png" alt="quicklist"></p>
+<h2 id="Set"><a href="#Set" class="headerlink" title="Set"></a>Set</h2><h3 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h3><ul>
+<li>存储大量数据、查询速度块</li>
+<li>集合中的数据是不重复且没有顺序</li>
+<li>集合类型的Redis内部是使用值为空的散列表实现，所有这些操作的时间复杂度都为0(1)</li>
+<li>集合类型的常用操作是向集合中加入或删除元素、判断某个元素是否存在等，除此之外Redis还提供了多个集合之间的交集、并集、差集的运算</li>
+</ul>
+<h5 id="hash-和-set-的结构"><a href="#hash-和-set-的结构" class="headerlink" title="hash 和 set 的结构"></a>hash 和 set 的结构</h5><ul>
+<li><strong>hash: key-{field:value}</strong></li>
+<li><strong>set: key-{value:null}</strong></li>
+</ul>
+<h2 id="Hash"><a href="#Hash" class="headerlink" title="Hash"></a>Hash</h2><p>hash叫散列类型，它提供了字段和字段值的映射。字段值只能是字符串类型，不支持其它类型</p>
+<p><img src="hash.png" alt="hash"></p>
+<p>格式：一个存储空间(key)存储多个键值对，底层通过哈希表进行存储</p>
+<p>如果filed数量较少时，会被优化为类数组（ziplist）的结构，如果filed数量多，就是HashMap</p>
+<p>hash最初设计不是为了存对象，不要把hash当成对象列表使用</p>
+<p><strong>扩展和收缩哈希表的工作可以通过执行rehash（重新散列）操作来完成，步骤如下：</strong></p>
+<ul>
+<li><p>为字典的ht[1]哈希表分配空间，空间大小根据实际情况而定</p>
+</li>
+<li><p>将ht[0]中所有键值对rehash到ht[1]中</p>
+<ul>
+<li>注意：rehash指的是重新计算键的哈希值和索引值，然后将键值对放置到ht[1]哈希表的指定位置上</li>
+</ul>
+</li>
+<li><p>释放ht[0]，将ht[1]设置为ht[0]，并在ht[1]新建一个空表，为下次rehash做准备</p>
+</li>
+</ul>
+<h5 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h5><p>电商购物车：添加购物车、浏览购物车商品、更改购物车商品数量、删除商品、清空商品均可实现。<br>  key : userID<br>  field : 商品ID<br>  value : 商品购买数量</p>
+<h2 id="Zset（跳跃表）"><a href="#Zset（跳跃表）" class="headerlink" title="Zset（跳跃表）"></a>Zset（跳跃表）</h2><h3 id="Zset-编码的选择"><a href="#Zset-编码的选择" class="headerlink" title="Zset 编码的选择"></a>Zset 编码的选择</h3><p><img src="zset%E7%BC%96%E7%A0%81%E9%80%89%E6%8B%A9.png" alt="zset编码选择"></p>
+<p>有序集合对象的编码可以是<code>ziplist</code>或者<code>skiplist</code>。同时满足以下条件时使用ziplist编码：</p>
+<ul>
+<li>元素数量小于128个</li>
+<li>所有member的长度都小于64字节</li>
+</ul>
+<h3 id="skiplist"><a href="#skiplist" class="headerlink" title="skiplist"></a>skiplist</h3><h5 id="1-介绍"><a href="#1-介绍" class="headerlink" title="1. 介绍"></a>1. 介绍</h5><p>skiplist 编码的 Zset 底层为一个被称为 zset 的结构体，这个结构体中包含一个字典和一个跳跃表。跳跃表按 score 从小到大保存所有集合元素，查找时间复杂度为平均 O(logN)，最坏 O(N) 。字典则保存着从 member 到 score 的映射，这样就可以用 O(1)的复杂度来查找 member 对应的 score 值。虽然同时使用两种结构，但它们会通过指针来共享相同元素的 member 和 score，因此不会浪费额外的内存</p>
+<h5 id="2-详解"><a href="#2-详解" class="headerlink" title="2. 详解"></a>2. 详解</h5><p>跳表(skip List)是一种随机化的数据结构，基于并联的链表，实现简单，插入、删除、查找的复杂度均为O(logN)。简单说来跳表也是链表的一种，只不过它在链表的基础上增加了跳跃功能，正是这个跳跃的功能，使得在查找元素时，跳表能够提供O(logN)的时间复杂度</p>
+<p>先来看一个有序链表，如下图（最左侧的灰色节点表示一个空的头结点）：</p>
+<p><img src="sl1.png" alt="sl1"></p>
+<p>在这样一个链表中，如果我们要查找某个数据，那么需要从头开始逐个进行比较，直到找到包含数据的那个节点，或者找到第一个比给定数据大的节点为止（没找到）。也就是说，时间复杂度为O(n)。同样，当我们要插入新数据的时候，也要经历同样的查找过程，从而确定插入位置</p>
+<p>skiplist 不要求上下相邻两层链表之间的节点个数有严格的对应关系，而是为每个节点随机出一个层数(level)。比如，一个节点随机出的层数是3，那么就把它链入到第1层到第3层这三层链表中。为了表达清楚，下图展示了如何通过一步步的插入操作从而形成一个skiplist的过程：</p>
+<p><img src="sk2.png" alt="sk2"></p>
+<p>从上面skiplist的创建和插入过程可以看出，每一个节点的层数（level）是随机出来的，而且新插入一个节点不会影响其它节点的层数。因此，插入操作只需要修改插入节点前后的指针，而不需要对很多节点都进行调整。这就降低了插入操作的复杂度。实际上，这是skiplist的一个很重要的特性，这让它在插入性能上明显优于平衡树的方案</p>
+<p>skiplist，指的就是除了最下面第1层链表之外，它会产生若干层稀疏的链表，这些链表里面的指针故意跳过了一些节点（而且越高层的链表跳过的节点越多）。这就使得我们在查找数据的时候能够先在高层的链表中进行查找，然后逐层降低，最终降到第1层链表来精确地确定数据位置。在这个过程中，我们跳过了一些节点，从而也就加快了查找速度</p>
+<p>假设我们在它里面依然查找23，下图给出了查找路径：</p>
+<p><img src="sk3.png" alt="sk3"></p>
+<p>需要注意的是，前面演示的各个节点的插入过程，实际上在插入之前也要先经历一个类似的查找过程，在确定插入位置后，再完成插入操作</p>
+<p>实际应用中的skiplist每个节点应该包含key和value两部分。前面的描述中我们没有具体区分key和value，但实际上列表中是按照key(score)进行排序的，查找过程也是根据key在比较</p>
+<h2 id="三、使用场景"><a href="#三、使用场景" class="headerlink" title="三、使用场景"></a>三、使用场景</h2><ul>
+<li>缓存<ul>
+<li>将热点数据放到内存中，设置内存的最大使用量以及淘汰策略来保证缓存的命中率</li>
+</ul>
+</li>
+<li>消息队列<ul>
+<li>List 是一个双向链表，可以通过 lpush 和 rpop 写入和读取消息</li>
+<li>不过最好使用 Kafka、RabbitMQ 等消息中间件</li>
+</ul>
+</li>
+<li>会话缓存<ul>
+<li>可以使用 Redis 来统一存储多台应用服务器的会话信息</li>
+<li>当应用服务器不再存储用户的会话信息，也就不再具有状态，一个用户可以请求任意一个应用服务器，从而更容易实现高可用性以及可伸缩性</li>
+</ul>
+</li>
+<li>分布式锁实现<ul>
+<li>在分布式场景下，无法使用单机环境下的锁来对多个节点上的进程进行同步</li>
+<li>可以使用 Redis 自带的 SETNX 命令实现分布式锁，他跟set相反，set会把值覆盖，而SETNX不会覆盖，会除此之外，还可以使用官方提供的 RedLock 分布式锁实现</li>
+</ul>
+</li>
+</ul>
+<h2 id="四、淘汰策略"><a href="#四、淘汰策略" class="headerlink" title="四、淘汰策略"></a>四、淘汰策略</h2><h3 id="1-前置知识"><a href="#1-前置知识" class="headerlink" title="1. 前置知识"></a>1. 前置知识</h3><ul>
+<li>过期策略<ul>
+<li>定期删除：redis默认是每隔 100ms就随机抽取一些设置了过期时间的key，检查其是否过期，如果过期就删除</li>
+<li>惰性删除：在客户端访问这个key的时候，redis对key的过期时间进行检查，如果过期了就立即删除，不会给你返回任何东西</li>
+</ul>
+</li>
+</ul>
+<p>总结：定期删除是集中处理，惰性删除是零散处理</p>
+<h3 id="2-为什么需要淘汰策略"><a href="#2-为什么需要淘汰策略" class="headerlink" title="2. 为什么需要淘汰策略"></a>2. 为什么需要淘汰策略</h3><p>因为不管是定期采样删除还是惰性删除都不是一种完全精准的删除，就还是会存在key没有被删除掉的场景，所以就需要内存淘汰策略进行补充</p>
+<h3 id="3-内存淘汰策略"><a href="#3-内存淘汰策略" class="headerlink" title="3. 内存淘汰策略"></a>3. 内存淘汰策略</h3><ul>
+<li>noeviction：当内存使用超过配置的时候会返回错误，不会驱逐任何键</li>
+<li>allkeys-lru：加入键的时候，如果过限，首先通过LRU算法驱逐最久没有使用的键</li>
+<li>volatile-lru：加入键的时候如果过限，首先从设置了过期时间的键集合中驱逐最久没有使用的键</li>
+<li>allkeys-random：加入键的时候如果过限，从所有key随机删除</li>
+<li>volatile-random：加入键的时候如果过限，从过期键的集合中随机驱逐</li>
+<li>volatile-ttl：从配置了过期时间的键中驱逐马上就要过期的键</li>
+<li>volatile-lfu：从所有配置了过期时间的键中驱逐使用频率最少的键</li>
+<li>allkeys-lfu：从所有键中驱逐使用频率最少的键</li>
+</ul>
+<h2 id="五、持久化"><a href="#五、持久化" class="headerlink" title="五、持久化"></a>五、持久化</h2><p>Redis 是内存型数据库，为了保证数据在断电后不会丢失，需要将内存中的数据持久化到硬盘上</p>
+<h3 id="RDB（快照）持久化"><a href="#RDB（快照）持久化" class="headerlink" title="RDB（快照）持久化"></a>RDB（快照）持久化</h3><h5 id="原理："><a href="#原理：" class="headerlink" title="原理："></a>原理：</h5><p>RDB文件存在是以一个压缩后的二进制文件。在某些时刻，redis 通过 fork（RDB会通过一个 bgsave 的命令，会 fork 出一个子进程） 产生一条子进程以及一个父进程的快照（副本），快照中有和父进程当前时刻相同的数据；此时父进程继续处理 client 请求执行 IO 操作；子进程负责将快照写入临时文件，子进程写完后，用临时文件替换原来的快照文件，然后子进程销毁；此操作每隔一定的时间就会执行一次。</p>
+<h3 id="AOF（日志）持久化"><a href="#AOF（日志）持久化" class="headerlink" title="AOF（日志）持久化"></a>AOF（日志）持久化</h3><h5 id="原理：-1"><a href="#原理：-1" class="headerlink" title="原理："></a>原理：</h5><p>将写命令添加到 AOF 文件（Append Only File）的末尾</p>
+<p>将“操作 + 数据”以格式化指令的方式追加到缓冲区中，然后缓冲区根据对应的策略向硬盘进行同步操作</p>
+<p>AOF保存了历史所有的操作过程。当server需要数据恢复时，可以直接加载日志文件，即可还原所有的操作过程</p>
+<p>使用 AOF 持久化需要设置同步选项，从而确保写命令同步到磁盘文件上的时机。这是因为对文件进行写入并不会马上将内容同步到磁盘上，而是先存储到缓冲区，然后由操作系统决定什么时候同步到磁盘。有以下同步选项：Redis目前支持三种AOF保存模式：</p>
+<p class="note note-success">
+    everysec：表示每秒同步一次(默认值，很快，但可能会丢失一秒以内的数据<br><br>
+    no：表示等操作系统进行数据缓存同步到磁盘，效率快，但是持久化没保证<br><br>
+    always：同步持久化，每次发生数据变更时，立即记录到磁盘,效率慢，严重减低服务器的性能，但是安全</p>
+
+<p><img src="aof.png" alt="aof"></p>
+<h2 id="六、实现高可用"><a href="#六、实现高可用" class="headerlink" title="六、实现高可用"></a>六、实现高可用</h2><h3 id="1-主从复制"><a href="#1-主从复制" class="headerlink" title="1. 主从复制"></a>1. 主从复制</h3><p>为了分担压力，Redis支持主从复制，Redis的主从结构可以采用一主多从或者级联结构，<strong>Redis主从同步策略的策略就是先是全量同步，再为增量同步</strong></p>
+<p><strong>全量同步</strong>：Redis全量复制一般<strong>发生在Slave初始化阶段</strong>，这时Slave需要将Master上的所有数据都复制一份。具体步骤如下：</p>
+<blockquote>
+<ol>
+<li>从服务器连接主服务器</li>
+<li>主服务器接收到命名后，开始执行BGSAVE命令生成RDB文件并使用缓冲区记录此后执行的所有写命令</li>
+<li>主服务器BGSAVE执行完后，向所有从服务器发送快照文件，并在发送期间继续记录被执行的写命令</li>
+<li>从服务器收到快照文件后丢弃所有旧数据，载入收到的快照</li>
+<li>主服务器快照发送完毕后开始向从服务器发送缓冲区中的写命令</li>
+<li>从服务器完成对快照的载入，开始接收命令请求，此后主服务器每执行一次写命令，就向从服务器发送相同的写命令（也就是增量同步）</li>
+</ol>
+</blockquote>
+<p><strong>增量同步</strong>：Redis增量复制是指<strong>Slave初始化</strong>后开始正常工作时主服务器发生的写操作同步到从服务器的过程。 增量复制的过程主要是主服务器每执行一个写命令就会向从服务器发送相同的写命令，从服务器接收并执行收到的写命令</p>
+<p><strong>主从复制的作用</strong>：主从复制，读写分离，容灾恢复。一台主机负责写入数据，多台从机负责备份数据。在高并发的场景下，即便是主机挂了，可以用从机代替主机继续工作，避免单点故障导致系统性能问题。读写分离，让读多写少的应用性能更佳</p>
+<h3 id="2-哨兵"><a href="#2-哨兵" class="headerlink" title="2. 哨兵"></a>2. 哨兵</h3><p><strong>使用 Redis 主从服务的时候，会有一个问题，就是当 Redis 的主从服务器出现故障宕机时，需要手动进行恢复，为了解决这个问题，Redis 增加了哨兵模式</strong>（因为哨兵模式做到了可以监控主从服务器，并且提供自动容灾恢复的功能）。 Sentinel（哨兵）可以监听集群中的服务器，并在主服务器进入下线状态时，自动从从服务器中选举出新的主服务器</p>
+<p><img src="%E5%93%A8%E5%85%B5.png" alt="哨兵"></p>
+<h3 id="3-集群"><a href="#3-集群" class="headerlink" title="3. 集群"></a>3. 集群</h3><h2 id="七、更新缓存机制"><a href="#七、更新缓存机制" class="headerlink" title="七、更新缓存机制"></a>七、更新缓存机制</h2><h3 id="1-先更新数据库，在删除缓存（推荐）"><a href="#1-先更新数据库，在删除缓存（推荐）" class="headerlink" title="1. 先更新数据库，在删除缓存（推荐）"></a>1. 先更新数据库，在删除缓存（推荐）</h3><p>若数据库更新成功，删除缓存操作失败，则此后读到的都是缓存中过期的数据，造成不一致问题</p>
+<p>可以设置过期时间</p>
+<h2 id="八、缓存雪崩-击穿-穿透"><a href="#八、缓存雪崩-击穿-穿透" class="headerlink" title="八、缓存雪崩/击穿/穿透"></a>八、缓存雪崩/击穿/穿透</h2><h3 id="1-缓存穿透"><a href="#1-缓存穿透" class="headerlink" title="1. 缓存穿透"></a>1. 缓存穿透</h3><blockquote>
+<p>描述</p>
+</blockquote>
+<p>指查询一个一定不存在的数据，由于缓存是不命中，将去查询数据库，但是数据库也无此记录，我们没有将这次查询的null写入缓存，这将导致这个不存在的数据每次请求都要到存储层去查询，失去了缓存的意义。</p>
+<blockquote>
+<p>风险</p>
+</blockquote>
+<p>利用不存在的数据及进行攻击，数据库瞬时压力增大，最终导致崩溃。</p>
+<blockquote>
+<p>解决方案1</p>
+</blockquote>
+<p>null结果也放到缓存中，并加入短暂过期时间。</p>
+<blockquote>
+<p>解决方案2</p>
+</blockquote>
+<ul>
+<li>布隆过滤器</li>
+<li>布隆过滤器是一种数据结构，对所有可能查询的参数以hash形式存储，在控制层先进性校验，不符合则丢弃，从而避免了对底层存储系统的查询压力。</li>
+</ul>
+<h3 id="2-缓存雪崩"><a href="#2-缓存雪崩" class="headerlink" title="2. 缓存雪崩"></a>2. 缓存雪崩</h3><blockquote>
+<p>描述</p>
+</blockquote>
+<p>缓存雪崩是指我们设置缓存时key采用了相同的过期时间，导致缓存在某一时刻同时失效，请求全部转发到DB，DB瞬时压力过重导致雪崩。</p>
+<blockquote>
+<p>解决方案</p>
+</blockquote>
+<p>原有的失效时间基础上增加一个随机值，比如1-5分钟随机，这样每一个缓存的过期时间的重复率就会降低，就很难引发集体失效的事件。</p>
+<h3 id="3-缓存击穿"><a href="#3-缓存击穿" class="headerlink" title="3. 缓存击穿"></a>3. 缓存击穿</h3><blockquote>
+<p>描述</p>
+</blockquote>
+<ul>
+<li>对于一些设置了过期时间的key，如果这些key可能会在某些时间点被超高并发地访问，是一种非常“热点”的数据。</li>
+<li>如果这个key在大量请求同时进来前正好失效，那么所有对这个key的数据查询都落到DB，我们成为缓存击穿</li>
+</ul>
+<blockquote>
+<p>解决方案</p>
+</blockquote>
+<ul>
+<li>加锁</li>
+<li>大量并发只让一个人去查，其他人等待，查到以后释放锁，其他人获取到锁，先查缓存，就会有数据，不用去DB</li>
+</ul>
+
+        </div>
+
+        
+
+        
+            <ul class="post-tags-box">
+                
+                    <li class="tag-item">
+                        <a href="/tags/Redis/">#Redis</a>&nbsp;
+                    </li>
+                
+                    <li class="tag-item">
+                        <a href="/tags/%E4%B8%AD%E9%97%B4%E4%BB%B6/">#中间件</a>&nbsp;
+                    </li>
+                
+                    <li class="tag-item">
+                        <a href="/tags/%E7%BC%93%E5%AD%98/">#缓存</a>&nbsp;
+                    </li>
+                
+            </ul>
+        
+
+        
+            <div class="article-nav">
+                
+                    <div class="article-prev">
+                        <a class="prev"
+                           rel="prev"
+                           href="/2021/04/19/MySQL%20%E7%B4%A2%E5%BC%95%E7%BB%93%E6%9E%84/"
+                        >
+                            <span class="left arrow-icon flex-center">
+                              <i class="fas fa-chevron-left"></i>
+                            </span>
+                            <span class="title flex-center">
+                                <span class="post-nav-title-item">MySQL 索引结构</span>
+                                <span class="post-nav-item">上一篇</span>
+                            </span>
+                        </a>
+                    </div>
+                
+                
+                    <div class="article-next">
+                        <a class="next"
+                           rel="next"
+                           href="/2020/04/07/hello-world/"
+                        >
+                            <span class="title flex-center">
+                                <span class="post-nav-title-item">Hellow World</span>
+                                <span class="post-nav-item">下一篇</span>
+                            </span>
+                            <span class="right arrow-icon flex-center">
+                              <i class="fas fa-chevron-right"></i>
+                            </span>
+                        </a>
+                    </div>
+                
+            </div>
+        
+
+        
+            <div class="comment-container">
+                <div class="comments-container">
+    <div id="comment-anchor"></div>
+    <div class="comment-area-title">
+        <i class="fas fa-comments">&nbsp;评论</i>
+    </div>
+    
+
+        
+            
+    <div class="twikoo-container">
+        <script 
+                src="https://cdn.jsdelivr.net/npm/twikoo@1.4.15/dist/twikoo.all.min.js"
+        ></script>
+        <div id="twikoo-comment"></div>
+        <script >
+            function loadTwikoo() {
+                twikoo.init({
+                    el: '#twikoo-comment',
+                    envId: 'https://blog-comment-two-ashen.vercel.app',
+                    region: '',
+                });
+            }
+
+            if ('false') {
+                const loadTwikooTimeout = setTimeout(() => {
+                    loadTwikoo();
+                    clearTimeout(loadTwikooTimeout);
+                }, 1000);
+            } else {
+                window.addEventListener('DOMContentLoaded', loadTwikoo);
+            }
+        </script>
+    </div>
+
+
+
+        
+    
+</div>
+
+            </div>
+        
+    </div>
+</div>
+
+
+                
+            </div>
+
+        </div>
+
+        <div class="page-main-content-bottom">
+            <footer class="footer">
+    <div class="info-container">
+        <div class="copyright-info info-item">
+            &copy;
+            
+              <span>2020</span>
+              -
+            
+            2022&nbsp;<i class="fas fa-heart icon-animate"></i>&nbsp;<a href="/">Z.J.H</a>
+        </div>
+        
+        <div class="theme-info info-item">
+            由 <a target="_blank" href="https://hexo.io">Hexo</a> 驱动&nbsp;|&nbsp;主题&nbsp;<a class="theme-version" target="_blank" href="https://github.com/XPoet/hexo-theme-keep">Keep v3.4.5</a>
+        </div>
+        
+        
+    </div>
+</footer>
+
+        </div>
+    </div>
+
+    
+        <div class="post-tools">
+            <div class="post-tools-container">
+    <ul class="tools-list">
+        <!-- TOC aside toggle -->
+        
+            <li class="tools-item page-aside-toggle">
+                <i class="fas fa-outdent"></i>
+            </li>
+        
+
+        <!-- go comment -->
+        
+            <li class="go-comment">
+                <i class="fas fa-comment"></i>
+            </li>
+        
+    </ul>
+</div>
+
+        </div>
+    
+
+    <div class="right-bottom-side-tools">
+        <div class="side-tools-container">
+    <ul class="side-tools-list">
+        <li class="tools-item tool-font-adjust-plus flex-center">
+            <i class="fas fa-search-plus"></i>
+        </li>
+
+        <li class="tools-item tool-font-adjust-minus flex-center">
+            <i class="fas fa-search-minus"></i>
+        </li>
+
+        <li class="tools-item tool-expand-width flex-center">
+            <i class="fas fa-arrows-alt-h"></i>
+        </li>
+
+        <li class="tools-item tool-dark-light-toggle flex-center">
+            <i class="fas fa-moon"></i>
+        </li>
+
+        <!-- rss -->
+        
+
+        
+
+        <li class="tools-item tool-scroll-to-bottom flex-center">
+            <i class="fas fa-arrow-down"></i>
+        </li>
+    </ul>
+
+    <ul class="exposed-tools-list">
+        <li class="tools-item tool-toggle-show flex-center">
+            <i class="fas fa-cog fa-spin"></i>
+        </li>
+        
+            <li class="tools-item tool-scroll-to-top flex-center">
+                <i class="arrow-up fas fa-arrow-up"></i>
+                <span class="percent"></span>
+            </li>
+        
+    </ul>
+</div>
+
+    </div>
+
+    
+        <aside class="page-aside">
+            <div class="post-toc-wrap">
+    <div class="post-toc">
+        <ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Redis"><span class="nav-number">1.</span> <span class="nav-text">Redis</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E6%A6%82%E8%BF%B0"><span class="nav-number">1.1.</span> <span class="nav-text">一、概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.2.</span> <span class="nav-text">二、数据类型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#String"><span class="nav-number">1.3.</span> <span class="nav-text">String</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%80%E4%B8%AAsds%E7%9A%84%E5%AD%98%E5%82%A8%E7%A4%BA%E4%BE%8B%EF%BC%9A"><span class="nav-number">1.3.0.0.1.</span> <span class="nav-text">一个sds的存储示例：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#SDS%E7%9A%84%E6%89%A9%E5%AE%B9%E6%9C%BA%E5%88%B6%EF%BC%9A"><span class="nav-number">1.3.0.0.2.</span> <span class="nav-text">SDS的扩容机制：</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-SDS-%E8%80%8C%E4%B8%8D%E6%98%AF%E7%94%A8%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%9A%84%E5%8E%9F%E5%9B%A0%EF%BC%9A"><span class="nav-number">1.3.0.0.3.</span> <span class="nav-text">使用 SDS 而不是用字符串的原因：</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#List%EF%BC%88%E5%88%97%E8%A1%A8%EF%BC%89"><span class="nav-number">1.4.</span> <span class="nav-text">List（列表）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0%EF%BC%9A"><span class="nav-number">1.4.1.</span> <span class="nav-text">底层实现：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ziplist"><span class="nav-number">1.4.2.</span> <span class="nav-text">ziplist</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#quicklist"><span class="nav-number">1.4.3.</span> <span class="nav-text">quicklist</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Set"><span class="nav-number">1.5.</span> <span class="nav-text">Set</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%89%B9%E7%82%B9"><span class="nav-number">1.5.1.</span> <span class="nav-text">特点</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#hash-%E5%92%8C-set-%E7%9A%84%E7%BB%93%E6%9E%84"><span class="nav-number">1.5.1.0.1.</span> <span class="nav-text">hash 和 set 的结构</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hash"><span class="nav-number">1.6.</span> <span class="nav-text">Hash</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">1.6.0.0.1.</span> <span class="nav-text">应用场景</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Zset%EF%BC%88%E8%B7%B3%E8%B7%83%E8%A1%A8%EF%BC%89"><span class="nav-number">1.7.</span> <span class="nav-text">Zset（跳跃表）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Zset-%E7%BC%96%E7%A0%81%E7%9A%84%E9%80%89%E6%8B%A9"><span class="nav-number">1.7.1.</span> <span class="nav-text">Zset 编码的选择</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#skiplist"><span class="nav-number">1.7.2.</span> <span class="nav-text">skiplist</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-%E4%BB%8B%E7%BB%8D"><span class="nav-number">1.7.2.0.1.</span> <span class="nav-text">1. 介绍</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-%E8%AF%A6%E8%A7%A3"><span class="nav-number">1.7.2.0.2.</span> <span class="nav-text">2. 详解</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="nav-number">1.8.</span> <span class="nav-text">三、使用场景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5"><span class="nav-number">1.9.</span> <span class="nav-text">四、淘汰策略</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86"><span class="nav-number">1.9.1.</span> <span class="nav-text">1. 前置知识</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5"><span class="nav-number">1.9.2.</span> <span class="nav-text">2. 为什么需要淘汰策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E5%86%85%E5%AD%98%E6%B7%98%E6%B1%B0%E7%AD%96%E7%95%A5"><span class="nav-number">1.9.3.</span> <span class="nav-text">3. 内存淘汰策略</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">1.10.</span> <span class="nav-text">五、持久化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#RDB%EF%BC%88%E5%BF%AB%E7%85%A7%EF%BC%89%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">1.10.1.</span> <span class="nav-text">RDB（快照）持久化</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%8E%9F%E7%90%86%EF%BC%9A"><span class="nav-number">1.10.1.0.1.</span> <span class="nav-text">原理：</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AOF%EF%BC%88%E6%97%A5%E5%BF%97%EF%BC%89%E6%8C%81%E4%B9%85%E5%8C%96"><span class="nav-number">1.10.2.</span> <span class="nav-text">AOF（日志）持久化</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%8E%9F%E7%90%86%EF%BC%9A-1"><span class="nav-number">1.10.2.0.1.</span> <span class="nav-text">原理：</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E5%AE%9E%E7%8E%B0%E9%AB%98%E5%8F%AF%E7%94%A8"><span class="nav-number">1.11.</span> <span class="nav-text">六、实现高可用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6"><span class="nav-number">1.11.1.</span> <span class="nav-text">1. 主从复制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E5%93%A8%E5%85%B5"><span class="nav-number">1.11.2.</span> <span class="nav-text">2. 哨兵</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E9%9B%86%E7%BE%A4"><span class="nav-number">1.11.3.</span> <span class="nav-text">3. 集群</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E6%9B%B4%E6%96%B0%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6"><span class="nav-number">1.12.</span> <span class="nav-text">七、更新缓存机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E5%85%88%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE%E5%BA%93%EF%BC%8C%E5%9C%A8%E5%88%A0%E9%99%A4%E7%BC%93%E5%AD%98%EF%BC%88%E6%8E%A8%E8%8D%90%EF%BC%89"><span class="nav-number">1.12.1.</span> <span class="nav-text">1. 先更新数据库，在删除缓存（推荐）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AB%E3%80%81%E7%BC%93%E5%AD%98%E9%9B%AA%E5%B4%A9-%E5%87%BB%E7%A9%BF-%E7%A9%BF%E9%80%8F"><span class="nav-number">1.13.</span> <span class="nav-text">八、缓存雪崩&#x2F;击穿&#x2F;穿透</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E7%BC%93%E5%AD%98%E7%A9%BF%E9%80%8F"><span class="nav-number">1.13.1.</span> <span class="nav-text">1. 缓存穿透</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E7%BC%93%E5%AD%98%E9%9B%AA%E5%B4%A9"><span class="nav-number">1.13.2.</span> <span class="nav-text">2. 缓存雪崩</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-%E7%BC%93%E5%AD%98%E5%87%BB%E7%A9%BF"><span class="nav-number">1.13.3.</span> <span class="nav-text">3. 缓存击穿</span></a></li></ol></li></ol></li></ol>
+    </div>
+</div>
+        </aside>
+    
+
+    <div class="image-viewer-container">
+    <img src="">
+</div>
+
+
+    
+        <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+          <span class="search-input-field-pre">
+            <i class="fas fa-keyboard"></i>
+          </span>
+            <div class="search-input-container">
+                <input autocomplete="off"
+                       autocorrect="off"
+                       autocapitalize="off"
+                       placeholder="搜索..."
+                       spellcheck="false"
+                       type="search"
+                       class="search-input"
+                >
+            </div>
+            <span class="popup-btn-close">
+                <i class="fas fa-times"></i>
+            </span>
+        </div>
+        <div id="search-result">
+            <div id="no-result">
+                <i class="fas fa-spinner fa-pulse fa-5x fa-fw"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+    
+
+</main>
+
+
+
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/main.js"></script>
+
+<script src="/js/header-shrink.js"></script>
+
+<script src="/js/back2top.js"></script>
+
+<script src="/js/dark-light-toggle.js"></script>
+
+
+
+    
+<script src="/js/local-search.js"></script>
+
+
+
+
+    
+<script src="/js/code-copy.js"></script>
+
+
+
+
+
+<div class="post-scripts">
+    
+        
+<script src="/js/left-side-toggle.js"></script>
+
+<script src="/js/libs/anime.min.js"></script>
+
+<script src="/js/toc.js"></script>
+
+    
+</div>
+
+
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"model":{"jsonPath":"/live2dw/assets/haruto.model.json"},"display":{"position":"right","width":150,"height":300},"mobile":{"show":false},"log":false,"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>
